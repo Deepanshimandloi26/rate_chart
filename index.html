@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Rate Chart</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <label>Starting Amount</label>
+        <input type="number" id="startAmount" placeholder="Enter amount">
+
+        <button onclick="openModal('fat')">Add FAT Step</button>
+        <button onclick="openModal('snf')">Add SNF Step</button>
+
+        <div class="step-list">
+            <h4>Fat Steps List</h4>
+            <ul id="fatStepsList"></ul>
+        </div>
+        <div class="step-list">
+            <h4>SNF Steps List</h4>
+            <ul id="snfStepsList"></ul>
+        </div>
+
+        <button onclick="generateRateChart()">Generate Rate Chart</button>
+    </div>
+
+    <div id="fatModal" class="modal">
+        <h3>Fat Steps</h3>
+        <label>Step</label>
+        <input type="number" id="fatStep" placeholder="0.0" step="0.1">
+        <label>Step Amount</label>
+        <input type="number" id="fatStepAmount" placeholder="0.00" step="0.01">
+        <div class="modal-buttons">
+            <button class="close" onclick="closeModal('fat')">Cancel</button>
+            <button class="confirm" onclick="saveStep('fat')">OK</button>
+        </div>
+    </div>
+
+    <div id="snfModal" class="modal">
+        <h3>SNF Steps</h3>
+        <label>Step</label>
+        <input type="number" id="snfStep" placeholder="0.0" step="0.1">
+        <label>Step Amount</label>
+        <input type="number" id="snfStepAmount" placeholder="0.00" step="0.01">
+        <div class="modal-buttons">
+            <button class="close" onclick="closeModal('snf')">Cancel</button>
+            <button class="confirm" onclick="saveStep('snf')">OK</button>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+
+    <script>
+        let fatSteps = [];
+        let snfSteps = [];
+
+        function openModal(type) {
+            document.getElementById(type + 'Modal').classList.add('active');
+            document.getElementById('overlay').classList.add('active');
+        }
+
+        function closeModal(type) {
+            document.getElementById(type + 'Modal').classList.remove('active');
+            document.getElementById('overlay').classList.remove('active');
+        }
+
+        function saveStep(type) {
+            let step = parseFloat(document.getElementById(type + 'Step').value) || 0;
+            let stepAmount = parseFloat(document.getElementById(type + 'StepAmount').value) || 0;
+
+            if (type === 'fat') {
+                fatSteps.push({ step, stepAmount });
+                fatSteps.sort((a, b) => a.step - b.step);
+                updateStepList('fat');
+            } else {
+                snfSteps.push({ step, stepAmount });
+                snfSteps.sort((a, b) => a.step - b.step);
+                updateStepList('snf');
+            }
+
+            closeModal(type);
+        }
+
+        function updateStepList(type) {
+            let list = document.getElementById(type + 'StepsList');
+            list.innerHTML = '';
+
+            let steps = type === 'fat' ? fatSteps : snfSteps;
+            steps.forEach(step => {
+                let li = document.createElement('li');
+                li.innerHTML = `Step: <span>${step.step}</span> - Amount: <span>${step.stepAmount}</span>`;
+                list.appendChild(li);
+            });
+        }
+
+        function generateRateChart() {
+            let startAmount = parseFloat(document.getElementById("startAmount").value) || 0;
+            let fatValues = [];
+            let snfValues = [];
+
+            
+            for (let i = 0; i < fatSteps.length; i++) {
+                let current = fatSteps[i];
+                let next = fatSteps[i + 1] || { step: current.step + 1, stepAmount: current.stepAmount };
+
+                for (let j = current.step; j < next.step; j += 0.1) {
+                    fatValues.push({ step: parseFloat(j.toFixed(1)), amount: startAmount });
+                    startAmount += current.stepAmount;
+                }
+            }
+
+          
+            startAmount = parseFloat(document.getElementById("startAmount").value) || 0;
+
+           
+            for (let i = 0; i < snfSteps.length; i++) {
+                let current = snfSteps[i];
+                let next = snfSteps[i + 1] || { step: current.step + 1, stepAmount: current.stepAmount };
+
+                for (let j = current.step; j < next.step; j += 0.1) {
+                    snfValues.push({ step: parseFloat(j.toFixed(1)), amount: startAmount });
+                    startAmount += current.stepAmount;
+                }
+            }
+
+            let chartHtml = "<table><tr><th>FAT/SNF</th>";
+            snfValues.forEach(snf => chartHtml += `<th>${snf.step.toFixed(1)}</th>`);
+            chartHtml += "</tr>";
+
+            fatValues.forEach(fat => {
+                chartHtml += `<tr><td>${fat.step.toFixed(1)}</td>`;
+                snfValues.forEach(snf => {
+                    let rate = fat.amount + snf.amount - parseFloat(document.getElementById("startAmount").value);
+                    chartHtml += `<td>${rate.toFixed(2)}</td>`;
+                });
+                chartHtml += "</tr>";
+            });
+
+            chartHtml += "</table>";
+            sessionStorage.setItem('rateChart', chartHtml);
+            window.location.href = "rate_chart.html";
+        }
+    </script>
+</body>
+
+</html>
